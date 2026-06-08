@@ -1,0 +1,18 @@
+# Entorno virtual
+venv/
+
+# Python
+__pycache__/
+*.pyc
+
+# Variables privadas
+.env
+
+# Base de datos (si usás local)
+*.db
+
+# Celery Beat
+celerybeat-schedule*
+
+# SendGrid 2FA Recovery
+twilio_2FA_recovery_code.txt
