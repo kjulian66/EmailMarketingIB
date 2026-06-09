@@ -1,6 +1,6 @@
 from fastapi import APIRouter, UploadFile, File
 from app.database import SessionLocal
-from app.models import Contact, Campaign, CampaignStep, ContactCampaign
+from app.models import Contact, Campaign, CampaignStep, ContactCampaign, Tag, contact_tags
 from app.campaign_service import run_campaign_steps_logic
 from app.email_tasks import run_campaign_async
 from datetime import datetime
@@ -8,6 +8,7 @@ import csv
 from io import StringIO
 
 router = APIRouter()
+
 
 # ✅ SUBSCRIBE
 @router.post("/subscribe")
@@ -26,23 +27,6 @@ def subscribe(email: str):
     db.close()
 
     return {"message": "✅ email suscripto"}
-
-
-# ✅ UNSUBSCRIBE
-@router.get("/unsubscribe")
-def unsubscribe(token: str):
-    db = SessionLocal()
-
-    contacto = db.query(Contact).filter_by(
-        unsubscribe_token=token
-    ).first()
-
-    if contacto:
-        contacto.is_subscribed = False
-        db.commit()
-
-    db.close()
-    return {"message": "✅ desuscripto"}
 
 
 # ✅ CREAR CAMPAÑA
@@ -93,12 +77,20 @@ def create_campaign_step(
     return result
 
 
-# ✅ INICIAR CAMPAÑA
+# ✅ INICIAR CAMPAÑA (CON TAGS 🔥)
 @router.post("/start-campaign")
-def start_campaign(campaign_id: int):
+def start_campaign(campaign_id: int, tag_ids: list[int] = []):
     db = SessionLocal()
 
-    contactos = db.query(Contact).filter_by(is_subscribed=True).all()
+    query = db.query(Contact).filter(Contact.is_subscribed == True)
+
+    # 🔥 filtro por tags
+    if tag_ids:
+        query = query.join(contact_tags, Contact.email == contact_tags.c.contact_email)
+        query = query.filter(contact_tags.c.tag_id.in_(tag_ids))
+
+    contactos = query.all()
+
     count = 0
 
     for c in contactos:
@@ -124,21 +116,21 @@ def start_campaign(campaign_id: int):
     return {"message": f"✅ campaña iniciada para {count} contactos"}
 
 
-# ✅ EJECUTAR CAMPAÑA (SYNC)
+# ✅ EJECUTAR CAMPAÑA
 @router.post("/run-campaign-steps")
 def run_campaign_steps(campaign_id: int):
     total = run_campaign_steps_logic(campaign_id)
     return {"message": f"✅ enviados {total} emails"}
 
 
-# ✅ EJECUTAR CAMPAÑA (ASYNC - CELERY)
+# ✅ ASYNC
 @router.post("/run-campaign-async")
 def run_campaign_async_endpoint(campaign_id: int):
     run_campaign_async.delay(campaign_id)
     return {"message": "✅ campaña encolada"}
 
 
-# ✅ CARGA CSV
+# ✅ SUBIR CSV
 @router.post("/upload-csv")
 async def upload_csv(file: UploadFile = File(...)):
     db = SessionLocal()
@@ -172,3 +164,52 @@ async def upload_csv(file: UploadFile = File(...)):
     db.close()
 
     return {"message": f"✅ {count} contactos cargados"}
+
+
+# ✅ CREAR TAG
+@router.post("/tag")
+def create_tag(name: str):
+    db = SessionLocal()
+
+    tag = Tag(name=name)
+    db.add(tag)
+    db.commit()
+
+    db.close()
+    return {"message": "✅ tag creado"}
+
+
+# ✅ ASIGNAR TAG A CONTACTO
+@router.post("/assign-tag")
+def assign_tag(email: str, tag_id: int):
+    db = SessionLocal()
+
+    db.execute(
+        contact_tags.insert().values(
+            contact_email=email,
+            tag_id=tag_id
+        )
+    )
+
+    db.commit()
+    db.close()
+
+    return {"message": "✅ tag asignado"}
+
+
+# ✅ LISTAR CONTACTOS
+@router.get("/contacts")
+def get_contacts():
+    db = SessionLocal()
+    contactos = db.query(Contact).all()
+    db.close()
+
+    return [{"email": c.email} for c in contactos]
+
+@router.get("/tags")
+def get_tags():
+    db = SessionLocal()
+    tags = db.query(Tag).all()
+    db.close()
+
+    return [{"id": t.id, "name": t.name} for t in tags]

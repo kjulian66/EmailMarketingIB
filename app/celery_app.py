@@ -15,6 +15,6 @@ celery.conf.imports = (
 celery.conf.beat_schedule = {
     "run-all-campaigns-every-30-seconds": {
         "task": "app.email_tasks.run_all_campaigns",
-        "schedule": 30.0,
+        "schedule": 300.0,
     }
 }

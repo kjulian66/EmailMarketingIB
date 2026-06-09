@@ -1,9 +1,25 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Table
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
-
 from app.database import Base
+
+
+# 🔥 TABLA INTERMEDIA (MUCHOS A MUCHOS)
+contact_tags = Table(
+    "contact_tags",
+    Base.metadata,
+    Column("contact_email", String, ForeignKey("contacts.email")),
+    Column("tag_id", Integer, ForeignKey("tags.id"))
+)
+
+
+# 🔹 TAGS
+class Tag(Base):
+    __tablename__ = "tags"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, nullable=False)
 
 
 # 🔹 CONTACTOS
@@ -14,8 +30,11 @@ class Contact(Base):
     is_subscribed = Column(Boolean, default=True)
     unsubscribe_token = Column(String, default=lambda: str(uuid.uuid4()))
 
-    # ✅ relación con campaigns (N:N)
+    # ✅ campañas
     contact_campaigns = relationship("ContactCampaign", back_populates="contact")
+
+    # ✅ 🔥 TAGS
+    tags = relationship("Tag", secondary=contact_tags)
 
 
 # 🔹 CAMPAÑAS
@@ -24,17 +43,15 @@ class Campaign(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String)
-    
-    subject = Column(String) 
-    content = Column(String) 
 
+    subject = Column(String)
+    content = Column(String)
 
-    # ✅ relaciones
     steps = relationship("CampaignStep", back_populates="campaign")
     contact_campaigns = relationship("ContactCampaign", back_populates="campaign")
 
 
-# 🔹 STEPS (emails dentro de una campaña)
+# 🔹 STEPS
 class CampaignStep(Base):
     __tablename__ = "campaign_steps"
 
@@ -46,11 +63,10 @@ class CampaignStep(Base):
     delay_days = Column(Integer, default=0)
     order_index = Column(Integer)
 
-    # ✅ relación
     campaign = relationship("Campaign", back_populates="steps")
 
 
-# 🔹 LOGS DE EMAIL
+# 🔹 EMAIL LOGS
 class EmailLog(Base):
     __tablename__ = "email_logs"
 
@@ -62,7 +78,6 @@ class EmailLog(Base):
     status = Column(String)
     sent_at = Column(DateTime, default=datetime.utcnow)
 
-    # ✅ relaciones
     contact = relationship("Contact")
     campaign_step = relationship("CampaignStep")
 
@@ -78,6 +93,5 @@ class ContactCampaign(Base):
 
     started_at = Column(DateTime, default=datetime.utcnow)
 
-    # ✅ RELACIONES IMPORTANTES
     contact = relationship("Contact", back_populates="contact_campaigns")
     campaign = relationship("Campaign", back_populates="contact_campaigns")

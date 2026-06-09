@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
-from app.models import CampaignStep, ContactCampaign, EmailLog, Contact
+from app.models import CampaignStep, ContactCampaign, EmailLog
 from app.email_service import send_email
 from datetime import datetime, timedelta
 
@@ -28,6 +28,9 @@ def run_campaign_steps_logic(campaign_id: int):
             if not contacto or not contacto.is_subscribed:
                 continue
 
+            # 🔥 normalización (evita bugs)
+            email = contacto.email.strip().lower()
+
             for step in steps:
 
                 send_time = cc.started_at + timedelta(days=step.delay_days)
@@ -35,8 +38,9 @@ def run_campaign_steps_logic(campaign_id: int):
                 if now < send_time:
                     continue
 
+                # 🔥 control de duplicados
                 existing_log = db.query(EmailLog).filter_by(
-                    contact_email=contacto.email,
+                    contact_email=email,
                     campaign_step_id=step.id
                 ).first()
 
@@ -44,15 +48,16 @@ def run_campaign_steps_logic(campaign_id: int):
                     continue
 
                 success = send_email(
-                    contacto.email,
+                    email,
                     contacto.unsubscribe_token,
                     step.subject,
                     step.content
                 )
 
+                # ✅ SOLO guarda si realmente se envió
                 if success:
                     log = EmailLog(
-                        contact_email=contacto.email,
+                        contact_email=email,
                         campaign_step_id=step.id,
                         status="sent"
                     )
