@@ -374,3 +374,12 @@ h1 {
     color: white;
     width: 300px;
 }
+
+/* ✅ COLUMNA TAGS FIJA */
+.data-table td:nth-child(3),
+.data-table th:nth-child(3) {
+    width: 180px;         /* ancho fijo */
+    white-space: nowrap;  /* evita salto */
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

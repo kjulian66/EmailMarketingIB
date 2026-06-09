@@ -157,6 +157,10 @@
                         <th onclick="sortById()">ID ⬍</th>
                         <th onclick="sortByEmail()">Email ⬍</th>
                         <th onclick="sortByTags()">Tags ⬍</th>
+
+                        <!-- ✅ NUEVA COLUMNA -->
+                        <th>Asignar tag</th>
+
                         <th onclick="sortByCampaigns()">Campañas ⬍</th>
                         <th onclick="sortByStatus()">Estado ⬍</th>
                         <th>Acción</th>
@@ -201,6 +205,7 @@
 </div>
 
 <!-- ✅ MODAL -->
+<!-- ✅ MODAL TAG -->
 <div id="tagModal" class="modal">
     <div class="modal-content">
         <h3>Asignar contactos</h3>
@@ -209,8 +214,16 @@
     </div>
 </div>
 
+<!-- ✅ 🔥 NUEVO MODAL CONTACTO -->
+<div id="contactTagModal" class="modal">
+    <div class="modal-content">
+        <h3>Asignar tags</h3>
+        <div id="contactTagList"></div>
+        <button onclick="closeContactModal()">Cerrar</button>
+    </div>
+</div>
+
 <script src="app.js"></script>
 
 </body>
 </html>
-``

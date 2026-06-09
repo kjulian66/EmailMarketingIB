@@ -82,6 +82,14 @@ function renderContacts() {
             <td>${c.id}</td>
             <td>${c.email}</td>
             <td>${c.tags.join(", ")}</td>
+
+            <!-- ✅ NUEVA COLUMNA -->
+            <td>
+                <button class="subscribe-btn" onclick="openContactTagModal(${c.id})">
+                    Asignar
+                </button>
+            </td>
+
             <td>${c.campaigns.join(", ")}</td>
             <td>${c.is_subscribed ? "Activo" : "Inactivo"}</td>
             <td>
@@ -221,7 +229,11 @@ function renderTags() {
             <td>${tag.name}</td>
             <td>${tag.campaigns.join(", ")}</td>
             <td>
-                <button onclick="openModal('${tag.name}')">Gestionar</button>
+                
+            <button class="subscribe-btn" onclick="openModal('${tag.name}')">
+                Asignar
+            </button>
+
             </td>
             <td>
                 <button class="unsubscribe-btn" onclick="deleteTag('${tag.name}')">Eliminar</button>
@@ -366,4 +378,98 @@ function updateTitle(id) {
     };
 
     document.getElementById("pageTitle").innerText = titles[id];
+}
+
+function openContactTagModal(contactId) {
+
+    const modal = document.getElementById("contactTagModal");
+    const container = document.getElementById("contactTagList");
+
+    const contact = contacts.find(c => c.id === contactId);
+
+    container.innerHTML = "";
+
+    tags.forEach(tag => {
+
+        const checked = contact.tags.includes(tag.name);
+
+        container.innerHTML += `
+            <div>
+                <input type="checkbox"
+                    ${checked ? "checked" : ""}
+                    onchange="toggleContactTag(${contactId}, '${tag.name}')">
+                ${tag.name}
+            </div>
+        `;
+    });
+
+    modal.style.display = "flex";
+}
+
+function closeContactModal() {
+    document.getElementById("contactTagModal").style.display = "none";
+}
+
+function toggleContactTag(contactId, tagName) {
+
+    const contact = contacts.find(c => c.id === contactId);
+    const tag = tags.find(t => t.name === tagName);
+
+    if (!contact || !tag) return;
+
+    const alreadyHasTag = contact.tags.includes(tagName);
+
+    // ✅ SI YA LO TIENE → PERMITE QUITAR SIEMPRE
+    if (alreadyHasTag) {
+
+        contact.tags = contact.tags.filter(t => t !== tagName);
+        tag.contacts = tag.contacts.filter(id => id !== contactId);
+
+    } else {
+
+        // ❌ LÍMITE DE 5 TAGS
+        if (contact.tags.length >= 5) {
+            alert("Máximo 5 tags por contacto");
+            return;
+        }
+
+        // ✅ AGREGA
+        contact.tags.push(tagName);
+
+        if (!tag.contacts.includes(contactId)) {
+            tag.contacts.push(contactId);
+        }
+    }
+
+    renderContacts();
+}
+
+
+let tagSortAsc = true;
+
+function sortTagsByName() {
+    tagSortAsc = !tagSortAsc;
+
+    tags.sort((a, b) =>
+        tagSortAsc
+            ? a.name.localeCompare(b.name)
+            : b.name.localeCompare(a.name)
+    );
+
+    renderTags();
+}
+
+function sortTagsByCampaigns() {
+    tagSortAsc = !tagSortAsc;
+
+    tags.sort((a, b) => {
+        const aVal = a.campaigns.join(", ");
+        const bVal = b.campaigns.join(", ");
+
+        return tagSortAsc
+            ? aVal.localeCompare(bVal)
+            : bVal.localeCompare(aVal);
+    });
+
+    renderTags();
 }
