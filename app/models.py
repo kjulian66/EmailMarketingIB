@@ -5,91 +5,112 @@ import uuid
 from app.database import Base
 
 
-# 🔥 TABLA INTERMEDIA (MUCHOS A MUCHOS)
+# 🔥 RELACIÓN MUCHOS A MUCHOS (contactos ↔ etiquetas)
 contact_tags = Table(
     "contact_tags",
     Base.metadata,
-    Column("contact_email", String, ForeignKey("contacts.email")),
-    Column("tag_id", Integer, ForeignKey("tags.id"))
+    Column("contact_id", Integer, ForeignKey("contactos.id")),
+    Column("tag_id", Integer, ForeignKey("etiquetas.id"))
 )
 
 
-# 🔹 TAGS
+# ✅ ETIQUETAS
 class Tag(Base):
-    __tablename__ = "tags"
+    __tablename__ = "etiquetas"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, nullable=False)
 
 
-# 🔹 CONTACTOS
+# ✅ CONTACTOS
 class Contact(Base):
-    __tablename__ = "contacts"
+    __tablename__ = "contactos"
 
-    email = Column(String, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=False)
     is_subscribed = Column(Boolean, default=True)
     unsubscribe_token = Column(String, default=lambda: str(uuid.uuid4()))
 
-    # ✅ campañas
+    tags = relationship("Tag", secondary=contact_tags)
     contact_campaigns = relationship("ContactCampaign", back_populates="contact")
 
-    # ✅ 🔥 TAGS
-    tags = relationship("Tag", secondary=contact_tags)
 
-
-# 🔹 CAMPAÑAS
-class Campaign(Base):
-    __tablename__ = "campaigns"
+# ✅ PLANTILLAS
+class EmailTemplate(Base):
+    __tablename__ = "plantillas"
 
     id = Column(Integer, primary_key=True, index=True)
+
     name = Column(String)
-
     subject = Column(String)
-    content = Column(String)
 
+    html = Column(String)
+    css = Column(String)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+# ✅ CAMPAÑAS
+class Campaign(Base):
+    __tablename__ = "campañas"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    name = Column(String)
+    subject = Column(String)
+
+    template_id = Column(Integer, ForeignKey("plantillas.id"))
+
+    status = Column(String, default="borrador")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    template = relationship("EmailTemplate")
     steps = relationship("CampaignStep", back_populates="campaign")
     contact_campaigns = relationship("ContactCampaign", back_populates="campaign")
 
 
-# 🔹 STEPS
+# ✅ PASOS DE CAMPAÑA
 class CampaignStep(Base):
-    __tablename__ = "campaign_steps"
+    __tablename__ = "pasos_campaña"
 
     id = Column(Integer, primary_key=True, index=True)
-    campaign_id = Column(Integer, ForeignKey("campaigns.id"))
 
-    subject = Column(String)
-    content = Column(String)
+    campaign_id = Column(Integer, ForeignKey("campañas.id"))
+    template_id = Column(Integer, ForeignKey("plantillas.id"))
+
     delay_days = Column(Integer, default=0)
     order_index = Column(Integer)
 
     campaign = relationship("Campaign", back_populates="steps")
+    template = relationship("EmailTemplate")
 
 
-# 🔹 EMAIL LOGS
+# ✅ LOGS DE EMAIL
 class EmailLog(Base):
-    __tablename__ = "email_logs"
+    __tablename__ = "logs_email"
 
     id = Column(Integer, primary_key=True, index=True)
 
-    contact_email = Column(String, ForeignKey("contacts.email"))
-    campaign_step_id = Column(Integer, ForeignKey("campaign_steps.id"))
+    contact_id = Column(Integer, ForeignKey("contactos.id"))
+    campaign_id = Column(Integer, ForeignKey("campañas.id"))
+    campaign_step_id = Column(Integer, ForeignKey("pasos_campaña.id"))
 
     status = Column(String)
     sent_at = Column(DateTime, default=datetime.utcnow)
 
     contact = relationship("Contact")
+    campaign = relationship("Campaign")
     campaign_step = relationship("CampaignStep")
 
 
-# 🔹 RELACIÓN CONTACTO ↔ CAMPAÑA
+# ✅ RELACIÓN CONTACTO ↔ CAMPAÑA
 class ContactCampaign(Base):
-    __tablename__ = "contact_campaigns"
+    __tablename__ = "contactos_campañas"
 
     id = Column(Integer, primary_key=True, index=True)
 
-    contact_email = Column(String, ForeignKey("contacts.email"))
-    campaign_id = Column(Integer, ForeignKey("campaigns.id"))
+    contact_id = Column(Integer, ForeignKey("contactos.id"))
+    campaign_id = Column(Integer, ForeignKey("campañas.id"))
 
     started_at = Column(DateTime, default=datetime.utcnow)
 

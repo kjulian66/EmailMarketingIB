@@ -1,11 +1,15 @@
 from fastapi import APIRouter, UploadFile, File
 from app.database import SessionLocal
 from app.models import Contact, Campaign, CampaignStep, ContactCampaign, Tag, contact_tags
+from app.schemas import ContactCreate
 from app.campaign_service import run_campaign_steps_logic
 from app.email_tasks import run_campaign_async
 from datetime import datetime
 import csv
 from io import StringIO
+import dns.resolver
+from fastapi import HTTPException
+
 
 router = APIRouter()
 
@@ -27,6 +31,23 @@ def subscribe(email: str):
     db.close()
 
     return {"message": "✅ email suscripto"}
+
+# ✅ DESUBSCRIBE
+@router.post("/unsubscribe")
+def unsubscribe(email: str):
+
+    db = SessionLocal()
+
+    contact = db.query(Contact).filter(Contact.email == email).first()
+
+    if contact:
+        contact.is_subscribed = False
+        db.commit()
+
+    db.close()
+
+    return {"message": "✅ contacto desuscripto"}
+
 
 
 # ✅ CREAR CAMPAÑA
@@ -133,6 +154,7 @@ def run_campaign_async_endpoint(campaign_id: int):
 # ✅ SUBIR CSV
 @router.post("/upload-csv")
 async def upload_csv(file: UploadFile = File(...)):
+
     db = SessionLocal()
 
     content = await file.read()
@@ -140,7 +162,11 @@ async def upload_csv(file: UploadFile = File(...)):
 
     reader = csv.reader(StringIO(decoded))
 
-    count = 0
+    next(reader, None)  # salta header
+
+    nuevos = 0
+    duplicados = 0
+    invalidos = 0
 
     for row in reader:
         if not row:
@@ -151,19 +177,26 @@ async def upload_csv(file: UploadFile = File(...)):
         if not email:
             continue
 
+        # 🔥 validación dominio
+        if not dominio_valido(email):
+            invalidos += 1
+            continue
+
         existing = db.query(Contact).filter(Contact.email == email).first()
 
         if existing:
-            existing.is_subscribed = True
-        else:
-            db.add(Contact(email=email))
+            duplicados += 1
+            continue
 
-        count += 1
+        db.add(Contact(email=email))
+        nuevos += 1
 
     db.commit()
     db.close()
 
-    return {"message": f"✅ {count} contactos cargados"}
+    return {
+        "message": f"✅ {nuevos} contactos cargados | ⚠ {duplicados} duplicados | ❌ {invalidos} inválidos"
+    }
 
 
 # ✅ CREAR TAG
@@ -200,11 +233,68 @@ def assign_tag(email: str, tag_id: int):
 # ✅ LISTAR CONTACTOS
 @router.get("/contacts")
 def get_contacts():
-    db = SessionLocal()
-    contactos = db.query(Contact).all()
-    db.close()
 
-    return [{"email": c.email} for c in contactos]
+    db = SessionLocal()
+
+    try:
+        contactos = db.query(Contact).order_by(Contact.id).all()
+
+        return [
+            {
+                "id": c.id,
+                "email": c.email,
+                "is_subscribed": c.is_subscribed
+            }
+            for c in contactos
+        ]
+
+    finally:
+        db.close()
+
+
+@router.post("/contacts")
+def create_contact(data: ContactCreate):
+
+    db = SessionLocal()
+
+    try:
+        # 🔥 VALIDACIÓN DE DOMINIO
+        if not dominio_valido(data.email):
+            raise HTTPException(
+                status_code=400,
+                detail="❌ dominio no válido"
+            )
+
+        # 🔥 EVITAR DUPLICADOS
+        existing = db.query(Contact).filter(Contact.email == data.email).first()
+        if existing:
+            raise HTTPException(
+                status_code=400,
+                detail="⚠ El contacto ya fue cargado"
+            )
+
+        # ✅ CREAR CONTACTO
+        nuevo = Contact(
+            email=data.email,
+            is_subscribed=True
+        )
+
+        db.add(nuevo)
+        db.commit()
+        db.refresh(nuevo)
+
+        return {
+            "id": nuevo.id,
+            "email": nuevo.email,
+            "is_subscribed": nuevo.is_subscribed
+        }
+
+    finally:
+        db.close()
+
+
+        
+        
 
 @router.get("/tags")
 def get_tags():
@@ -213,3 +303,20 @@ def get_tags():
     db.close()
 
     return [{"id": t.id, "name": t.name} for t in tags]
+
+
+def dominio_valido(email):
+    domain = email.split("@")[1]
+
+    try:
+        # 🔥 checkea si el dominio existe (A record)
+        dns.resolver.resolve(domain, 'A')
+
+        # 🔥 checkea si tiene mail (MX)
+        dns.resolver.resolve(domain, 'MX')
+
+        return True
+
+    except:
+        return False
+

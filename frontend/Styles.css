@@ -69,6 +69,7 @@ body {
     padding: 8px 12px;
     border-radius: 6px;
     cursor: pointer;
+    border: 3px solid #ffcc00;
 }
 
 .sidebar.collapsed .toggle-btn {
@@ -164,7 +165,7 @@ body {
 
 /* ✅ TITULOS */
 h1 {
-    color: white;
+    color: #ffcc00;
     margin: 0 0 15px 0;
     font-size: 22px;
 }
@@ -382,4 +383,80 @@ h1 {
     white-space: nowrap;  /* evita salto */
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+/* contenedor del buscador */
+#contactos > input.search-input {
+    display: block;
+    margin-left: auto;
+    margin-bottom: 10px;
+}
+
+/* estilo del buscador */
+.search-input {
+    width: 240px;
+    padding: 10px 14px;
+
+    border-radius: 10px;
+    border: 2px solid #ffcc00;
+
+    background: #000;
+    color: #ffcc00;
+
+    font-size: 14px;
+    font-weight: 500;
+
+    transition: all 0.25s ease;
+}
+
+.search-input::placeholder {
+    color: rgba(255, 204, 0, 0.7);
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #ffd633;
+    box-shadow: 0 0 10px rgba(255, 204, 0, 0.5);
+}
+
+
+.search-bar {
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+    margin: 20px 0 15px 0;
+}
+
+
+.search-bar {
+    position: absolute;
+    top: 85px;   /* ajustá esto si querés moverlo más arriba/abajo */
+    right: 20px; /* lo pega a la derecha */
+}
+
+
+#contactos {
+    position: relative;
+}
+
+/* 🔥 SCROLLBAR GENERAL */
+/* tamaño */
+::-webkit-scrollbar {
+    width: 5px;   /* 🔥 más finito */
+}
+
+/* fondo */
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* barra */
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 204, 0, 0.5);
+    border-radius: 10px;
+}
+
+/* hover */
+::-webkit-scrollbar-thumb:hover {
+    background: #ffd633;
 }

@@ -10,12 +10,34 @@ let contacts = [
 ];
 
 let tags = [
-    { name: "cliente", campaigns: ["Promo"], contacts: [1] },
-    { name: "lead", campaigns: ["Promo"], contacts: [2] }
+    { id: 1, name: "cliente", campaigns: ["Promo"], contacts: [1] },
+    { id: 2, name: "lead", campaigns: ["Promo"], contacts: [2] }
 ];
 
-let filteredContacts = [...contacts];
+let templates = [
+    { id: 1, name: "Promo Junio", subject: "20% OFF" }
+];
+
+
+let campaigns = [
+    {
+        id: 1,
+        name: "Campaña prueba",
+        template_name: "Promo Junio",
+        subject: "20% OFF 🔥",
+        status: "borrador"
+    }
+];
+
+
+
+
+let filteredContacts = [];
+let filteredContactsMaster = [];
+
 let sortAsc = true;
+let templateSortAsc = true;
+let tagSortAsc = true;
 
 /* =========================
    ✅ SIDEBAR
@@ -50,14 +72,29 @@ function showSection(id, el) {
 
     if (el) el.classList.add("active-menu");
 
-    if (id === "contactos") {
-        filteredContacts = [...contacts];
-        renderContacts();
-    }
+    setTimeout(() => {
 
-    if (id === "tags") {
-        renderTags();
-    }
+
+        if (id === "contactos") {
+            loadContacts();
+        }
+
+
+        if (id === "tags") {
+            renderTags();
+        }
+
+        if (id === "templates") {
+            loadTemplates();
+        }
+
+        
+        if (id === "campanas") {
+            loadCampaigns();
+        }
+
+
+    }, 0);
 
     updateBackButton();
     updateTitle(id);
@@ -68,7 +105,6 @@ function showSection(id, el) {
 ========================= */
 
 function renderContacts() {
-
     const table = document.getElementById("contactsTable");
     if (!table) return;
 
@@ -81,17 +117,17 @@ function renderContacts() {
         row.innerHTML = `
             <td>${c.id}</td>
             <td>${c.email}</td>
-            <td>${c.tags.join(", ")}</td>
+            <td>${c.tags.join(", ") || "-"}</td>
 
-            <!-- ✅ NUEVA COLUMNA -->
             <td>
                 <button class="subscribe-btn" onclick="openContactTagModal(${c.id})">
                     Asignar
                 </button>
             </td>
 
-            <td>${c.campaigns.join(", ")}</td>
+            <td>${c.campaigns.join(", ") || "-"}</td>
             <td>${c.is_subscribed ? "Activo" : "Inactivo"}</td>
+
             <td>
                 ${
                     c.is_subscribed
@@ -103,111 +139,6 @@ function renderContacts() {
 
         table.appendChild(row);
     });
-}
-
-/* ✅ SORT */
-
-function sortById() {
-    sortAsc = !sortAsc;
-    filteredContacts.sort((a,b)=> sortAsc ? a.id-b.id : b.id-a.id);
-    renderContacts();
-}
-
-function sortByEmail() {
-    sortAsc = !sortAsc;
-    filteredContacts.sort((a,b)=> 
-        sortAsc
-        ? a.email.localeCompare(b.email)
-        : b.email.localeCompare(a.email)
-    );
-    renderContacts();
-}
-
-function sortByTags() {
-    sortAsc = !sortAsc;
-    filteredContacts.sort((a,b)=> 
-        sortAsc
-        ? a.tags.join(", ").localeCompare(b.tags.join(", "))
-        : b.tags.join(", ").localeCompare(a.tags.join(", "))
-    );
-    renderContacts();
-}
-
-function sortByCampaigns() {
-    sortAsc = !sortAsc;
-    filteredContacts.sort((a,b)=> 
-        sortAsc
-        ? a.campaigns.join(", ").localeCompare(b.campaigns.join(", "))
-        : b.campaigns.join(", ").localeCompare(a.campaigns.join(", "))
-    );
-    renderContacts();
-}
-
-function sortByStatus() {
-    sortAsc = !sortAsc;
-    filteredContacts.sort((a,b)=> 
-        sortAsc
-        ? a.is_subscribed - b.is_subscribed
-        : b.is_subscribed - a.is_subscribed
-    );
-    renderContacts();
-}
-
-/* ✅ ACCIONES CONTACTOS */
-
-function unsubscribe(id) {
-    const c = contacts.find(x => x.id === id);
-    if (!c) return;
-
-    c.is_subscribed = false;
-    filteredContacts = [...contacts];
-    renderContacts();
-}
-
-function subscribe(id) {
-    const c = contacts.find(x => x.id === id);
-    if (!c) return;
-
-    c.is_subscribed = true;
-    filteredContacts = [...contacts];
-    renderContacts();
-}
-
-function addContact() {
-
-    const email = prompt("Email:");
-    if (!email) return;
-
-    contacts.push({
-        id: contacts.length + 1,
-        email,
-        tags: [],
-        campaigns: [],
-        is_subscribed: true
-    });
-
-    filteredContacts = [...contacts];
-    renderContacts();
-}
-
-function importFile(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    alert("Archivo: " + file.name);
-}
-
-function downloadTemplate() {
-
-    const csv = "email\nexample@gmail.com";
-
-    const blob = new Blob([csv], { type: "text/csv" });
-
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "plantilla_contactos.csv";
-
-    a.click();
 }
 
 /* =========================
@@ -226,17 +157,20 @@ function renderTags() {
         const row = document.createElement("tr");
 
         row.innerHTML = `
+            <td>${tag.id}</td>
             <td>${tag.name}</td>
-            <td>${tag.campaigns.join(", ")}</td>
-            <td>
-                
-            <button class="subscribe-btn" onclick="openModal('${tag.name}')">
-                Asignar
-            </button>
+            <td>${tag.campaigns.join(", ") || "-"}</td>
 
-            </td>
             <td>
-                <button class="unsubscribe-btn" onclick="deleteTag('${tag.name}')">Eliminar</button>
+                <button class="subscribe-btn" onclick="openModal('${tag.name}')">
+                    Asignar
+                </button>
+            </td>
+
+            <td>
+                <button class="unsubscribe-btn" onclick="deleteTag('${tag.name}')">
+                    Eliminar
+                </button>
             </td>
         `;
 
@@ -244,118 +178,50 @@ function renderTags() {
     });
 }
 
-/* ✅ TAG ACCIONES */
-
-function addTag() {
-    const name = prompt("Nombre del tag:");
-    if (!name) return;
-
-    tags.push({
-        name,
-        campaigns: [],
-        contacts: []
-    });
-
-    renderTags();
-}
-
-function deleteTag(name) {
-    tags = tags.filter(t => t.name !== name);
-    renderTags();
-}
-
-function importTags(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    alert("Archivo de tags: " + file.name);
-}
-
-function downloadTagTemplate() {
-
-    const csv = "tag\ncliente";
-
-    const blob = new Blob([csv], { type: "text/csv" });
-
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "plantilla_tags.csv";
-
-    a.click();
-}
-
 /* =========================
-   ✅ MODAL TAGS
+   ✅ TEMPLATES
 ========================= */
 
-function openModal(tagName) {
+function loadTemplates() {
 
-    const modal = document.getElementById("tagModal");
-    const container = document.getElementById("modalContacts");
+    const table = document.getElementById("templatesTable");
+    if (!table) return;
 
-    container.innerHTML = "";
+    table.innerHTML = "";
 
-    contacts.forEach(c => {
+    templates.forEach(t => {
 
-        const isChecked = tags.find(t => t.name === tagName).contacts.includes(c.id);
+        const row = document.createElement("tr");
 
-        container.innerHTML += `
-            <div>
-                <input type="checkbox"
-                    ${isChecked ? "checked" : ""}
-                    onchange="toggleTag('${tagName}', ${c.id})">
-                ${c.email}
-            </div>
+        row.innerHTML = `
+            <td>${t.id}</td>
+            <td>${t.name}</td>
+            <td>${t.subject}</td>
+
+            <td>
+                <button class="subscribe-btn">
+                    Editar
+                </button>
+            </td>
+
+            <td>
+                <button class="unsubscribe-btn">
+                    Eliminar
+                </button>
+            </td>
         `;
+
+        table.appendChild(row);
     });
-
-    modal.style.display = "flex";
-}
-
-function closeModal() {
-    document.getElementById("tagModal").style.display = "none";
-}
-
-/* ✅ RELACIÓN TAGS-CONTACTOS */
-
-function toggleTag(tagName, contactId) {
-
-    const tag = tags.find(t => t.name === tagName);
-
-    if (tag.contacts.includes(contactId)) {
-        tag.contacts = tag.contacts.filter(id => id !== contactId);
-    } else {
-        tag.contacts.push(contactId);
-    }
-
-    /* actualizar contactos también */
-    contacts.forEach(c => {
-        if (c.id === contactId) {
-            if (tag.contacts.includes(contactId)) {
-                if (!c.tags.includes(tagName)) c.tags.push(tagName);
-            } else {
-                c.tags = c.tags.filter(t => t !== tagName);
-            }
-        }
-    });
-
-    renderContacts();
 }
 
 /* =========================
-   ✅ BACK
+   ✅ BACK + TITLE
 ========================= */
 
 function goBack() {
-    if (historyStack.length === 0) return;
-
-    const last = historyStack.pop();
-
-    document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
-    document.getElementById(last).classList.add("active");
-
-    updateBackButton();
-    updateTitle(last);
+    if (!historyStack.length) return;
+    showSection(historyStack.pop());
 }
 
 function updateBackButton() {
@@ -363,113 +229,287 @@ function updateBackButton() {
     btn.style.display = historyStack.length ? "block" : "none";
 }
 
-/* =========================
-   ✅ TÍTULOS
-========================= */
-
 function updateTitle(id) {
-
     const titles = {
         inicio: "INICIO",
         contactos: "CONTACTOS",
         tags: "TAGS",
-        campañas: "CAMPAÑAS",
-        stats: "ESTADÍSTICAS"
+        templates: "TEMPLATES",
+        campanas: "CAMPANAS",
+        stats: "ESTADISTICAS"
     };
 
     document.getElementById("pageTitle").innerText = titles[id];
 }
 
-function openContactTagModal(contactId) {
+function addCampaign() {
 
-    const modal = document.getElementById("contactTagModal");
-    const container = document.getElementById("contactTagList");
+    const name = prompt("Nombre de la campaña:");
+    if (!name) return;
 
-    const contact = contacts.find(c => c.id === contactId);
+    // elegir template
+    const templateId = Number(prompt("ID del template a usar:"));
+    const template = templates.find(t => t.id === templateId);
 
-    container.innerHTML = "";
+    if (!template) {
+        alert("Template no encontrado");
+        return;
+    }
 
-    tags.forEach(tag => {
+    // asunto editable
+    const subject = prompt("Asunto del mail:", template.subject);
 
-        const checked = contact.tags.includes(tag.name);
-
-        container.innerHTML += `
-            <div>
-                <input type="checkbox"
-                    ${checked ? "checked" : ""}
-                    onchange="toggleContactTag(${contactId}, '${tag.name}')">
-                ${tag.name}
-            </div>
-        `;
+    campaigns.push({
+        id: campaigns.length + 1,
+        name: name,
+        template_id: template.id,
+        template_name: template.name,
+        subject: subject,
+        status: "borrador"
     });
 
-    modal.style.display = "flex";
+    loadCampaigns();
 }
 
-function closeContactModal() {
-    document.getElementById("contactTagModal").style.display = "none";
+function loadCampaigns() {
+
+    const table = document.getElementById("campaignsTable");
+    if (!table) return;
+
+    table.innerHTML = "";
+
+    campaigns.forEach(c => {
+
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
+            <td>${c.id}</td>
+            <td>${c.name}</td>
+            <td>${c.template_name}</td>
+            <td>${c.subject}</td>
+            <td>${c.status}</td>
+        `;
+
+        table.appendChild(row);
+    });
 }
 
-function toggleContactTag(contactId, tagName) {
+function addContact() {
 
-    const contact = contacts.find(c => c.id === contactId);
-    const tag = tags.find(t => t.name === tagName);
+    const email = prompt("Ingrese email:");
+    if (!email) return;
 
-    if (!contact || !tag) return;
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    const alreadyHasTag = contact.tags.includes(tagName);
+    if (!regex.test(email)) {
+        alert("❌ Email inválido");
+        return;
+    }
 
-    // ✅ SI YA LO TIENE → PERMITE QUITAR SIEMPRE
-    if (alreadyHasTag) {
+    fetch("http://localhost:8000/contacts", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ email })
+    })
+    .then(async res => {
 
-        contact.tags = contact.tags.filter(t => t !== tagName);
-        tag.contacts = tag.contacts.filter(id => id !== contactId);
+        const data = await res.json();
 
-    } else {
+        console.log("RESPUESTA:", res.status, data); // 🔥 DEBUG
 
-        // ❌ LÍMITE DE 5 TAGS
-        if (contact.tags.length >= 5) {
-            alert("Máximo 5 tags por contacto");
+        if (!res.ok) {
+            alert(data.detail);
             return;
         }
 
-        // ✅ AGREGA
-        contact.tags.push(tagName);
+        alert("✅ Contacto agregado");
 
-        if (!tag.contacts.includes(contactId)) {
-            tag.contacts.push(contactId);
-        }
-    }
+        loadContacts();
+    })
+    .catch(err => console.error(err));
+}
+
+
+function loadContacts() {
+
+    fetch("http://localhost:8000/contacts")
+        .then(res => res.json())
+        .then(data => {
+
+            filteredContactsMaster = data.map(c => ({
+                id: c.id,
+                email: c.email,
+                tags: [],
+                campaigns: [],
+                is_subscribed: c.is_subscribed
+            }));
+
+            filteredContacts = [...filteredContactsMaster];
+
+            renderContacts();
+        })
+        .catch(err => {
+            console.error("Error cargando contactos:", err);
+        });
+}
+``
+
+
+function downloadTemplate() {
+
+    const csvContent = "email\n";
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "plantilla_contactos.csv");
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function importFile(event) {
+
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // 🔥 ACÁ VA EL LOG
+    console.log("Subiendo archivo:", file.name);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    fetch("http://localhost:8000/upload-csv", {
+        method: "POST",
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+
+        alert(data.message);
+
+        loadContacts();
+
+        // 🔥 reset para poder subir el mismo archivo otra vez
+        event.target.value = "";
+
+    })
+    .catch(err => console.error("Error:", err));
+}
+
+
+function openFileInput() {
+    document.getElementById("fileInput").click();
+}
+
+function unsubscribe(id) {
+
+    const contact = filteredContacts.find(c => c.id === id);
+    if (!contact) return;
+
+    fetch("http://localhost:8000/unsubscribe?email=" + contact.email, {
+        method: "POST"
+    })
+    .then(res => res.json())
+    .then(() => {
+        loadContacts();
+    })
+    .catch(err => console.error("Error:", err));
+}
+
+function subscribe(id) {
+
+    const contact = filteredContacts.find(c => c.id === id);
+    if (!contact) return;
+
+    fetch("http://localhost:8000/subscribe?email=" + contact.email, {
+        method: "POST"
+    })
+    .then(res => res.json())
+    .then(() => {
+        loadContacts();
+    })
+    .catch(err => console.error("Error:", err));
+}
+
+function sortById() {
+
+    filteredContacts.sort((a, b) =>
+        sortAsc ? a.id - b.id : b.id - a.id
+    );
+
+    sortAsc = !sortAsc;
 
     renderContacts();
 }
 
+function sortByEmail() {
 
-let tagSortAsc = true;
-
-function sortTagsByName() {
-    tagSortAsc = !tagSortAsc;
-
-    tags.sort((a, b) =>
-        tagSortAsc
-            ? a.name.localeCompare(b.name)
-            : b.name.localeCompare(a.name)
+    filteredContacts.sort((a, b) =>
+        sortAsc
+            ? a.email.localeCompare(b.email)
+            : b.email.localeCompare(a.email)
     );
 
-    renderTags();
+    sortAsc = !sortAsc;
+
+    renderContacts();
 }
 
-function sortTagsByCampaigns() {
-    tagSortAsc = !tagSortAsc;
+function sortByTags() {
 
-    tags.sort((a, b) => {
-        const aVal = a.campaigns.join(", ");
-        const bVal = b.campaigns.join(", ");
+    filteredContacts.sort((a, b) =>
+        sortAsc
+            ? a.tags.length - b.tags.length
+            : b.tags.length - a.tags.length
+    );
 
-        return tagSortAsc
-            ? aVal.localeCompare(bVal)
-            : bVal.localeCompare(aVal);
-    });
+    sortAsc = !sortAsc;
 
-    renderTags();
+    renderContacts();
+}
+
+function sortByCampaigns() {
+
+    filteredContacts.sort((a, b) =>
+        sortAsc
+            ? a.campaigns.length - b.campaigns.length
+            : b.campaigns.length - a.campaigns.length
+    );
+
+    sortAsc = !sortAsc;
+
+    renderContacts();
+}
+
+function sortByStatus() {
+
+    filteredContacts.sort((a, b) =>
+        sortAsc
+            ? a.is_subscribed - b.is_subscribed
+            : b.is_subscribed - a.is_subscribed
+    );
+
+    sortAsc = !sortAsc;
+
+    renderContacts();
+}
+
+function searchContacts(query) {
+
+    const q = query.toLowerCase();
+
+    if (!filteredContactsMaster) return;
+
+    filteredContacts = filteredContactsMaster.filter(c =>
+        c.email.toLowerCase().includes(q)
+    );
+
+    renderContacts();
 }
