@@ -74,15 +74,16 @@ class CampaignStep(Base):
     __tablename__ = "pasos_campaña"
 
     id = Column(Integer, primary_key=True, index=True)
-
     campaign_id = Column(Integer, ForeignKey("campañas.id"))
-    template_id = Column(Integer, ForeignKey("plantillas.id"))
+
+    subject = Column(String, nullable=True)
+    content = Column(String)
 
     delay_days = Column(Integer, default=0)
     order_index = Column(Integer)
 
     campaign = relationship("Campaign", back_populates="steps")
-    template = relationship("EmailTemplate")
+
 
 
 # ✅ LOGS DE EMAIL

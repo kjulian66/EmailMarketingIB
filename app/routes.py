@@ -33,32 +33,36 @@ def subscribe(email: str):
     return {"message": "✅ email suscripto"}
 
 # ✅ DESUBSCRIBE
-@router.post("/unsubscribe")
-def unsubscribe(email: str):
 
+@router.get("/unsubscribe")
+def unsubscribe(token: str):
     db = SessionLocal()
 
-    contact = db.query(Contact).filter(Contact.email == email).first()
+    try:
+        contact = db.query(Contact).filter_by(unsubscribe_token=token).first()
 
-    if contact:
+        if not contact:
+            return {"message": "Token inválido"}
+
         contact.is_subscribed = False
         db.commit()
 
-    db.close()
+        return {"message": "✅ Te desuscribiste correctamente"}
 
-    return {"message": "✅ contacto desuscripto"}
+    finally:
+        db.close()
+
 
 
 
 # ✅ CREAR CAMPAÑA
 @router.post("/campaign")
-def create_campaign(name: str, subject: str, content: str):
+def create_campaign(name: str, subject: str):
     db = SessionLocal()
 
     campaign = Campaign(
         name=name,
-        subject=subject,
-        content=content
+        subject=subject 
     )
 
     db.add(campaign)
@@ -72,22 +76,26 @@ def create_campaign(name: str, subject: str, content: str):
 
 # ✅ CREAR STEP
 @router.post("/campaign-step")
+
 def create_campaign_step(
-    campaign_id: int,
-    subject: str,
-    content: str,
-    delay_days: int,
-    order_index: int
-):
+        campaign_id: int,
+        subject: str,        
+        content: str,
+        delay_days: int,
+        order_index: int
+    ):
+
     db = SessionLocal()
+
 
     step = CampaignStep(
         campaign_id=campaign_id,
-        subject=subject,
+        subject=subject,      
         content=content,
         delay_days=delay_days,
         order_index=order_index
     )
+
 
     db.add(step)
     db.commit()
@@ -116,7 +124,7 @@ def start_campaign(campaign_id: int, tag_ids: list[int] = []):
 
     for c in contactos:
         existing = db.query(ContactCampaign).filter_by(
-            contact_email=c.email,
+            contact_id=c.id,
             campaign_id=campaign_id
         ).first()
 
@@ -124,7 +132,7 @@ def start_campaign(campaign_id: int, tag_ids: list[int] = []):
             continue
 
         cc = ContactCampaign(
-            contact_email=c.email,
+            contact_id=c.id,
             campaign_id=campaign_id,
             started_at=datetime.utcnow()
         )
