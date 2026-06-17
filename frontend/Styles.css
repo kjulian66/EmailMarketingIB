@@ -370,11 +370,19 @@ h1 {
 
 .modal-content {
     background: #111;
-    padding: 20px;
     border-radius: 10px;
-    color: white;
-    width: 300px;
+
+    width: 400px;
+    height: 450px;
+
+    display: flex;
+    flex-direction: column;
+
+    padding: 20px;
+
+    box-shadow: 0px 0px 20px rgba(0,0,0,0.5);
 }
+
 
 /* ✅ COLUMNA TAGS FIJA */
 .data-table td:nth-child(3),
@@ -459,4 +467,151 @@ h1 {
 /* hover */
 ::-webkit-scrollbar-thumb:hover {
     background: #ffd633;
+}
+
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+
+    background: rgba(0, 0, 0, 0.6); /* overlay oscuro */
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    z-index: 1000;
+}
+
+.modal-content {
+    background: #111;
+    padding: 20px;
+    border-radius: 10px;
+
+    width: 400px;
+    max-height: 500px;
+    overflow-y: auto;
+
+    box-shadow: 0px 0px 20px rgba(0,0,0,0.5);
+}
+
+
+#contactsCheckboxList {
+    overflow-y: auto;
+    flex: 1;
+
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+
+.modal-content button {
+    margin-top: 15px;
+    margin-right: 10px;
+
+    padding: 8px 12px;
+
+    border: none;
+    border-radius: 6px;
+
+    cursor: pointer;
+}
+
+.modal-content button:first-of-type {
+    background: #ffcc00; /* verde igual que asignar */
+    color: white;
+}
+
+.modal-content button:last-of-type {
+    background: #444;
+    color: white;
+}
+
+#contactsCheckboxList input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+
+    accent-color: #ffc107; /* amarillo */
+    cursor: pointer;
+}
+
+.modal-content h3 {
+    color: #ffc107;  /* amarillo */
+}
+
+#contactsCheckboxList {
+    color: white;    /* lista en blanco */
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.modal-content {
+    background: #111;
+    border-radius: 10px;
+
+    width: 400px;
+    height: 450px;
+
+    display: flex;
+    flex-direction: column;
+
+    padding: 20px;
+
+    box-shadow: 0px 0px 20px rgba(0,0,0,0.5);
+}
+
+
+#contactsCheckboxList {
+    overflow-y: auto;
+    flex: 1;
+
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.more-tags {
+    color: #ffc107;
+    cursor: pointer;
+    margin-left: 5px;
+}
+
+.more-tags:hover {
+    text-decoration: underline;
+}
+
+#tagsPreviewList {
+    color: white;
+    margin-top: 10px;
+}
+
+#tagsPreviewList div {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 6px 0;
+}
+
+.confirm-btn {
+    background: #ffc107;
+    color: black;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.cancel-btn {
+    background: #444;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
 }

@@ -183,11 +183,18 @@
     <!-- ✅ TAGS (FIX REAL) -->
     <div id="tags" class="section">
         <div class="actions-grid">
-            <div class="action-card" onclick="addTag()">➕ Agregar tag</div>
-            <div class="action-card">
+            <div class="action-card" onclick="createTag()">➕ Agregar tag</div>
+            
+            <div class="action-card" onclick="openTagsFileInput()">
                 📂 Importar tags
-                <input type="file" onchange="importTags(event)">
             </div>
+
+            <input 
+                type="file" 
+                id="tagsFileInput"
+                style="display:none;" 
+                onchange="importTags(event)">
+
             <div class="action-card" onclick="downloadTagTemplate()">⬇ Plantilla</div>
         </div>
 
@@ -256,6 +263,47 @@
     <div id="stats" class="section"></div>
 
 </div>
+<!-- ✅ MODAL ASIGNAR CONTACTOS -->
+<div id="assignModal" class="modal" style="display:none;">
+    <div class="modal-content">
+
+        <h3>Asignar contactos</h3>
+
+        <input 
+            type="text" 
+            id="modalSearch"
+            placeholder="Buscar..."
+            class="search-input"
+            oninput="filterModalList(this.value)"
+        >
+
+        <div id="contactsCheckboxList"></div>
+
+
+        <div class="modal-actions">
+            <button onclick="confirmAssign()">Asignar</button>
+            <button onclick="closeModal()">Cerrar</button>
+        </div>
+
+
+    </div>
+</div>
+<div id="tagsPreviewModal" class="modal" style="display:none;">
+    <div class="modal-content">
+
+        <h3>Tags asignados</h3>
+
+        <div id="tagsPreviewList"></div>
+
+        <div class="modal-actions">
+            <button class="confirm-btn" onclick="confirmPreviewChanges()">Aceptar</button>
+            <button class="cancel-btn" onclick="closeTagsPreview()">Cancelar</button>
+        </div>
+
+    </div>
+</div>
+
+
 
 <script src="app.js"></script>
 

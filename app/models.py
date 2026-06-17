@@ -5,26 +5,26 @@ import uuid
 from app.database import Base
 
 
-# 🔥 RELACIÓN MUCHOS A MUCHOS (contactos ↔ etiquetas)
+# 🔥 MANY TO MANY RELATION (contacts ↔ tags)
 contact_tags = Table(
     "contact_tags",
     Base.metadata,
-    Column("contact_id", Integer, ForeignKey("contactos.id")),
-    Column("tag_id", Integer, ForeignKey("etiquetas.id"))
+    Column("contact_id", Integer, ForeignKey("contacts.id")),
+    Column("tag_id", Integer, ForeignKey("tags.id"))
 )
 
 
-# ✅ ETIQUETAS
+# ✅ TAGS
 class Tag(Base):
-    __tablename__ = "etiquetas"
+    __tablename__ = "tags"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, nullable=False)
 
 
-# ✅ CONTACTOS
+# ✅ CONTACTS
 class Contact(Base):
-    __tablename__ = "contactos"
+    __tablename__ = "contacts"
 
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
@@ -35,9 +35,9 @@ class Contact(Base):
     contact_campaigns = relationship("ContactCampaign", back_populates="contact")
 
 
-# ✅ PLANTILLAS
+# ✅ TEMPLATES (mantengo porque vos lo tenías, después lo vas a borrar)
 class EmailTemplate(Base):
-    __tablename__ = "plantillas"
+    __tablename__ = "templates"
 
     id = Column(Integer, primary_key=True, index=True)
 
@@ -50,31 +50,32 @@ class EmailTemplate(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
-# ✅ CAMPAÑAS
+# ✅ CAMPAIGNS
 class Campaign(Base):
-    __tablename__ = "campañas"
+    __tablename__ = "campaigns"
 
     id = Column(Integer, primary_key=True, index=True)
 
     name = Column(String)
     subject = Column(String)
 
-    template_id = Column(Integer, ForeignKey("plantillas.id"))
+    template_id = Column(Integer, ForeignKey("templates.id"))
 
-    status = Column(String, default="borrador")
+    status = Column(String, default="draft")
     created_at = Column(DateTime, default=datetime.utcnow)
 
     template = relationship("EmailTemplate")
     steps = relationship("CampaignStep", back_populates="campaign")
     contact_campaigns = relationship("ContactCampaign", back_populates="campaign")
+    schedules = relationship("CampaignSchedule", back_populates="campaign")
 
 
-# ✅ PASOS DE CAMPAÑA
+# ✅ CAMPAIGN STEPS (templates reales)
 class CampaignStep(Base):
-    __tablename__ = "pasos_campaña"
+    __tablename__ = "campaign_steps"
 
     id = Column(Integer, primary_key=True, index=True)
-    campaign_id = Column(Integer, ForeignKey("campañas.id"))
+    campaign_id = Column(Integer, ForeignKey("campaigns.id"))
 
     subject = Column(String, nullable=True)
     content = Column(String)
@@ -85,16 +86,15 @@ class CampaignStep(Base):
     campaign = relationship("Campaign", back_populates="steps")
 
 
-
-# ✅ LOGS DE EMAIL
+# ✅ EMAIL LOGS
 class EmailLog(Base):
-    __tablename__ = "logs_email"
+    __tablename__ = "email_logs"
 
     id = Column(Integer, primary_key=True, index=True)
 
-    contact_id = Column(Integer, ForeignKey("contactos.id"))
-    campaign_id = Column(Integer, ForeignKey("campañas.id"))
-    campaign_step_id = Column(Integer, ForeignKey("pasos_campaña.id"))
+    contact_id = Column(Integer, ForeignKey("contacts.id"))
+    campaign_id = Column(Integer, ForeignKey("campaigns.id"))
+    campaign_step_id = Column(Integer, ForeignKey("campaign_steps.id"))
 
     status = Column(String)
     sent_at = Column(DateTime, default=datetime.utcnow)
@@ -104,16 +104,31 @@ class EmailLog(Base):
     campaign_step = relationship("CampaignStep")
 
 
-# ✅ RELACIÓN CONTACTO ↔ CAMPAÑA
+# ✅ CONTACT ↔ CAMPAIGN RELATION
 class ContactCampaign(Base):
-    __tablename__ = "contactos_campañas"
+    __tablename__ = "contact_campaigns"
 
     id = Column(Integer, primary_key=True, index=True)
 
-    contact_id = Column(Integer, ForeignKey("contactos.id"))
-    campaign_id = Column(Integer, ForeignKey("campañas.id"))
+    contact_id = Column(Integer, ForeignKey("contacts.id"))
+    campaign_id = Column(Integer, ForeignKey("campaigns.id"))
 
     started_at = Column(DateTime, default=datetime.utcnow)
 
     contact = relationship("Contact", back_populates="contact_campaigns")
     campaign = relationship("Campaign", back_populates="contact_campaigns")
+
+
+# ✅ CAMPAIGN SCHEDULE (nuevo sistema de fechas)
+class CampaignSchedule(Base):
+    __tablename__ = "campaign_schedules"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    campaign_id = Column(Integer, ForeignKey("campaigns.id"))
+    step_id = Column(Integer, ForeignKey("campaign_steps.id"))
+
+    scheduled_at = Column(DateTime, nullable=False)
+
+    campaign = relationship("Campaign", back_populates="schedules")
+    step = relationship("CampaignStep")

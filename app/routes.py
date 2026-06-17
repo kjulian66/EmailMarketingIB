@@ -32,8 +32,8 @@ def subscribe(email: str):
 
     return {"message": "✅ email suscripto"}
 
-# ✅ DESUBSCRIBE
 
+# ✅ DESUBSCRIBE
 @router.get("/unsubscribe")
 def unsubscribe(token: str):
     db = SessionLocal()
@@ -51,8 +51,6 @@ def unsubscribe(token: str):
 
     finally:
         db.close()
-
-
 
 
 # ✅ CREAR CAMPAÑA
@@ -76,7 +74,6 @@ def create_campaign(name: str, subject: str):
 
 # ✅ CREAR STEP
 @router.post("/campaign-step")
-
 def create_campaign_step(
         campaign_id: int,
         subject: str,        
@@ -87,7 +84,6 @@ def create_campaign_step(
 
     db = SessionLocal()
 
-
     step = CampaignStep(
         campaign_id=campaign_id,
         subject=subject,      
@@ -95,7 +91,6 @@ def create_campaign_step(
         delay_days=delay_days,
         order_index=order_index
     )
-
 
     db.add(step)
     db.commit()
@@ -106,16 +101,16 @@ def create_campaign_step(
     return result
 
 
-# ✅ INICIAR CAMPAÑA (CON TAGS 🔥)
+# ✅ INICIAR CAMPAÑA (CON TAGS)
 @router.post("/start-campaign")
 def start_campaign(campaign_id: int, tag_ids: list[int] = []):
     db = SessionLocal()
 
     query = db.query(Contact).filter(Contact.is_subscribed == True)
 
-    # 🔥 filtro por tags
+    # 🔥 FIX IMPORTANTE
     if tag_ids:
-        query = query.join(contact_tags, Contact.email == contact_tags.c.contact_email)
+        query = query.join(contact_tags, Contact.id == contact_tags.c.contact_id)
         query = query.filter(contact_tags.c.tag_id.in_(tag_ids))
 
     contactos = query.all()
@@ -170,7 +165,7 @@ async def upload_csv(file: UploadFile = File(...)):
 
     reader = csv.reader(StringIO(decoded))
 
-    next(reader, None)  # salta header
+    next(reader, None)
 
     nuevos = 0
     duplicados = 0
@@ -185,7 +180,6 @@ async def upload_csv(file: UploadFile = File(...)):
         if not email:
             continue
 
-        # 🔥 validación dominio
         if not dominio_valido(email):
             invalidos += 1
             continue
@@ -220,14 +214,26 @@ def create_tag(name: str):
     return {"message": "✅ tag creado"}
 
 
-# ✅ ASIGNAR TAG A CONTACTO
+# ✅ ASIGNAR TAG A CONTACTO (FIX IMPORTANTE)
 @router.post("/assign-tag")
-def assign_tag(email: str, tag_id: int):
+def assign_tag(contact_id: int, tag_id: int):
+
     db = SessionLocal()
+
+    exists = db.execute(
+        contact_tags.select().where(
+            (contact_tags.c.contact_id == contact_id) &
+            (contact_tags.c.tag_id == tag_id)
+        )
+    ).first()
+
+    if exists:
+        db.close()
+        return {"message": "⚠ ya asignado"}
 
     db.execute(
         contact_tags.insert().values(
-            contact_email=email,
+            contact_id=contact_id,
             tag_id=tag_id
         )
     )
@@ -235,45 +241,52 @@ def assign_tag(email: str, tag_id: int):
     db.commit()
     db.close()
 
-    return {"message": "✅ tag asignado"}
+    return {"message": "✅ asignado"}
+
 
 
 # ✅ LISTAR CONTACTOS
+
 @router.get("/contacts")
 def get_contacts():
-
     db = SessionLocal()
 
-    try:
-        contactos = db.query(Contact).order_by(Contact.id).all()
+    contacts = db.query(Contact).all()
 
-        return [
-            {
-                "id": c.id,
-                "email": c.email,
-                "is_subscribed": c.is_subscribed
-            }
-            for c in contactos
+    result = []
+
+    for c in contacts:
+
+        tag_names = [
+            t.name for t in c.tags
         ]
 
-    finally:
-        db.close()
+        result.append({
+            "id": c.id,
+            "email": c.email,
+            "is_subscribed": c.is_subscribed,
+            "tags": tag_names
+        })
+
+    db.close()
+
+    return result
 
 
+
+# ✅ CREAR CONTACTO
 @router.post("/contacts")
 def create_contact(data: ContactCreate):
 
     db = SessionLocal()
 
     try:
-        # 🔥 VALIDACIÓN DE DOMINIO
         if not dominio_valido(data.email):
             raise HTTPException(
                 status_code=400,
                 detail="❌ dominio no válido"
             )
 
-        # 🔥 EVITAR DUPLICADOS
         existing = db.query(Contact).filter(Contact.email == data.email).first()
         if existing:
             raise HTTPException(
@@ -281,7 +294,6 @@ def create_contact(data: ContactCreate):
                 detail="⚠ El contacto ya fue cargado"
             )
 
-        # ✅ CREAR CONTACTO
         nuevo = Contact(
             email=data.email,
             is_subscribed=True
@@ -301,9 +313,6 @@ def create_contact(data: ContactCreate):
         db.close()
 
 
-        
-        
-
 @router.get("/tags")
 def get_tags():
     db = SessionLocal()
@@ -317,14 +326,112 @@ def dominio_valido(email):
     domain = email.split("@")[1]
 
     try:
-        # 🔥 checkea si el dominio existe (A record)
         dns.resolver.resolve(domain, 'A')
-
-        # 🔥 checkea si tiene mail (MX)
         dns.resolver.resolve(domain, 'MX')
-
         return True
-
     except:
         return False
+    
 
+@router.post("/unsubscribe-by-id")
+def unsubscribe_by_id(contact_id: int):
+    db = SessionLocal()
+
+    try:
+        contact = db.query(Contact).filter_by(id=contact_id).first()
+
+        if not contact:
+            return {"message": "❌ contacto no encontrado"}
+
+        contact.is_subscribed = False
+        db.commit()
+
+        return {"message": "✅ desuscripto"}
+
+    finally:
+        db.close()
+
+
+@router.post("/subscribe-by-id")
+def subscribe_by_id(contact_id: int):
+    db = SessionLocal()
+
+    try:
+        contact = db.query(Contact).filter_by(id=contact_id).first()
+
+        if not contact:
+            return {"message": "❌ contacto no encontrado"}
+
+        contact.is_subscribed = True
+        db.commit()
+
+        return {"message": "✅ suscripto"}
+
+    finally:
+        db.close()
+
+@router.post("/upload-tags")
+async def upload_tags(file: UploadFile = File(...)):
+
+    db = SessionLocal()
+
+    content = await file.read()
+    decoded = content.decode("utf-8")
+
+    reader = csv.reader(StringIO(decoded))
+
+    next(reader, None)  # salta header
+
+    nuevos = 0
+    duplicados = 0
+
+    for row in reader:
+        if not row:
+            continue
+
+        name = row[0].strip().lower()
+
+        if not name:
+            continue
+
+        existing = db.query(Tag).filter(Tag.name == name).first()
+
+        if existing:
+            duplicados += 1
+            continue
+
+        db.add(Tag(name=name))
+        nuevos += 1
+
+    db.commit()
+    db.close()
+
+    return {
+        "message": f"✅ {nuevos} tags creados | ⚠ {duplicados} duplicados"
+    }
+
+@router.delete("/tag")
+def delete_tag(name: str):
+
+    db = SessionLocal()
+
+    tag = db.query(Tag).filter(Tag.name == name).first()
+
+    if not tag:
+        db.close()
+        return {"message": "❌ no encontrado"}
+
+    # ✅ 1. ELIMINAR RELACIONES (MUY IMPORTANTE)
+    db.execute(
+        contact_tags.delete().where(contact_tags.c.tag_id == tag.id)
+    )
+
+    # ✅ 2. ELIMINAR TAG
+    db.delete(tag)
+
+    # ✅ 3. GUARDAR CAMBIOS
+    db.commit()
+
+    db.close()
+
+    return {"message": "✅ eliminado"}
